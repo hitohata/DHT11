@@ -1,9 +1,9 @@
 use core::panic;
 
-use rppal::gpio::{ Gpio, OutputPin, InputPin };
+use rppal::gpio::{ Gpio, OutputPin, InputPin, Level };
 
 const GPIO_COMMUNICATOR_PIN: u8 = 5;
-const TIME_OUT_USEC: usize = 100;
+const TIME_OUT_USEC: u16 = 1000;
 
 fn main() {
 
@@ -15,18 +15,9 @@ fn main() {
 
     dht11.setup();
 
-    // dht11.is_response_one();
-
-    // for i in 0..40 {
-    //     if dht11.is_response_one() {
-    //         buf.push(1);
-    //     } else {
-    //         buf.push(0)
-    //     }
-    //     println!("{:?}", buf);
-    // }
-
-    // println!("{:?}", buf);
+    for i in 0..40 {
+        println!("{}: {:?}", i + 1, dht11.read_bit());
+    }
 
 }
 
@@ -36,6 +27,7 @@ struct DHT11 {
 
 impl DHT11 {
     pub fn new(gpio: Gpio) -> Self {
+
         DHT11 { gpio }
     }
 
@@ -43,55 +35,39 @@ impl DHT11 {
     pub fn setup(&self) {
 
         // send a start signal.
-        let output = self.pin_output(); // TODO: handling
-        output.is_set_low();
-        self.wait_mil_sec(20);
+        {
+            let output = self.pin_output(); // TODO: handling
+            output.is_set_low();
+            self.wait_mil_sec(20);
+            output.is_set_high();
+            self.wait_micro_sec(40);
+        }
 
-        // wait a setting up
-        self.pin_input();
-        self.wait_micro_sec(40);
+        self.read_bit();
     }
 
-    fn is_response_one(&self) -> bool {
+    fn read_bit(&self) -> bool {
+        let low_time = self.wait_pulse(Level::High);
+        let high_time = self.wait_pulse(Level::Low);
 
-        let pin = self.gpio.get(GPIO_COMMUNICATOR_PIN).unwrap();
-        let input = pin.into_input();
-        let mut low_count: usize = 0; 
-        let mut high_count: usize = 0;
+        high_time > low_time
+    }
 
-        loop {
-            if low_count > TIME_OUT_USEC {
-                panic!("The low voltage state exceeds 100 micro sec.");
+    /// wait until it changes to the disired voltage.
+    fn wait_pulse(&self, level: Level) -> u32 {
+
+        let mut count = 0_u16;
+        let input = self.pin_input();
+
+        while input.read() != level {
+            count += 1;
+            if count > TIME_OUT_USEC {
+                panic!("time out"); // handle
             }
-
-            if input.is_high() {
-                break;
-            } else {
-                low_count += 1;
-            }
-            std::thread::sleep(std::time::Duration::from_micros(1));
+            self.wait_micro_sec(1);
         }
 
-
-        loop {
-            if high_count > TIME_OUT_USEC {
-                panic!("The high voltage state exceeds 100 micro sec.");
-            }
-
-            if input.is_low() {
-                break;
-            } else {
-                high_count += 1;
-            }
-            std::thread::sleep(std::time::Duration::from_micros(1));
-        }
-
-        if high_count > low_count {
-            true
-        } else {
-            false
-        }
-
+        u32::from(count)
     }
 
     fn pin_output(&self) -> OutputPin {
