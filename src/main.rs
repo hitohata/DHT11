@@ -1,6 +1,6 @@
 use core::panic;
 
-use rppal::gpio::{ Gpio };
+use rppal::gpio::{ Gpio, OutputPin, InputPin };
 
 const GPIO_COMMUNICATOR_PIN: u8 = 5;
 const TIME_OUT_USEC: usize = 100;
@@ -14,18 +14,19 @@ fn main() {
     let mut buf : Vec<u8>= vec![];
 
     dht11.setup();
-    dht11.is_response_one();
 
-    for i in 0..40 {
-        if dht11.is_response_one() {
-            buf.push(1);
-        } else {
-            buf.push(0)
-        }
-        println!("{:?}", buf);
-    }
+    // dht11.is_response_one();
 
-    println!("{:?}", buf);
+    // for i in 0..40 {
+    //     if dht11.is_response_one() {
+    //         buf.push(1);
+    //     } else {
+    //         buf.push(0)
+    //     }
+    //     println!("{:?}", buf);
+    // }
+
+    // println!("{:?}", buf);
 
 }
 
@@ -38,20 +39,17 @@ impl DHT11 {
         DHT11 { gpio }
     }
 
+    /// Set up the connection to the DHT11
     pub fn setup(&self) {
 
-        let pin = self.gpio.get(GPIO_COMMUNICATOR_PIN).unwrap();
-        let output = pin.into_output();
-
-        output.is_set_high();
-
+        // send a start signal.
+        let output = self.pin_output(); // TODO: handling
         output.is_set_low();
+        self.wait_mil_sec(20);
 
-        std::thread::sleep(std::time::Duration::from_millis(20));
-
-        output.is_set_high();
-
-        std::thread::sleep(std::time::Duration::from_micros(40));
+        // wait a setting up
+        self.pin_input();
+        self.wait_micro_sec(40);
     }
 
     fn is_response_one(&self) -> bool {
@@ -94,5 +92,25 @@ impl DHT11 {
             false
         }
 
+    }
+
+    fn pin_output(&self) -> OutputPin {
+        let pin = self.gpio.get(GPIO_COMMUNICATOR_PIN).unwrap(); // TODO; handling
+        pin.into_output()
+    }
+
+    fn pin_input(&self) -> InputPin {
+        let pin = self.gpio.get(GPIO_COMMUNICATOR_PIN).unwrap(); // TODO; handling
+        pin.into_input()
+    }
+
+    #[inline]
+    fn wait_mil_sec(&self, duration: u64) {
+        std::thread::sleep(std::time::Duration::from_micros(duration))
+    }
+
+    #[inline]
+    fn wait_micro_sec(&self, duration: u64) {
+        std::thread::sleep(std::time::Duration::from_micros(duration))
     }
 }
