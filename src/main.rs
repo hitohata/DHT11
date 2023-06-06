@@ -47,16 +47,14 @@ impl DHT11 {
         // send a start signal.
         self.to_output_mode();
         self.set_high_level();
-
-        delay.delay_ms(10);
+        delay.delay_ms(1);
 
         self.set_low_level();
-
         delay.delay_ms(20);
 
-        self.to_input_mode();
+        self.set_high_level();
 
-        delay.delay_us(10);
+        delay.delay_us(40);
 
         println!("after handshake: {}", self.read_bit(delay));
     }
@@ -83,7 +81,10 @@ impl DHT11 {
 
         let mut count = 0;
 
+        let now = std::time::SystemTime::now();
+
         while self.pin.read() != level {
+            println!("{:?}", now.elapsed().unwrap().as_micros());
             println!("{:?}: {}",self.pin.read(), count);
             count += 1;
             if count > TIME_OUT_USEC {
