@@ -1,15 +1,13 @@
 use core::panic;
 
-use rppal::gpio::{ Gpio, OutputPin, InputPin, Level };
+use rppal::gpio::{ Gpio, IoPin, Level, Mode };
 
 const GPIO_COMMUNICATOR_PIN: u8 = 5;
 const TIME_OUT_USEC: u16 = 1000;
 
 fn main() {
 
-    let gpio = Gpio::new().unwrap();
-
-    let dht11 = DHT11::new(gpio);
+    let mut dht11 = DHT11::new(GPIO_COMMUNICATOR_PIN);
 
     let mut buf : Vec<u8>= vec![];
 
@@ -21,45 +19,54 @@ fn main() {
 
 }
 
-struct DHT11 {
-    gpio: Gpio
+struct DHT11
+{
+    pin: IoPin
 }
 
 impl DHT11 {
-    pub fn new(gpio: Gpio) -> Self {
+    pub fn new(pin_number: u8) -> Self {
 
-        DHT11 { gpio }
+        let gpio = Gpio::new().unwrap();
+        let pin = gpio.get(pin_number).unwrap();
+
+        DHT11 { pin: pin.into_io(Mode::Input) }
     }
 
     /// Set up the connection to the DHT11
-    pub fn setup(&self) {
+    pub fn setup(&mut self) {
 
         // send a start signal.
-        {
-            let output = self.pin_output(); // TODO: handling
-            output.is_set_low();
-            self.wait_mil_sec(20);
-            output.is_set_high();
-            self.wait_micro_sec(40);
-        }
+        self.to_output_mode();
+        self.set_low_level();
+        self.wait_mil_sec(20);
 
+        self.to_input_mode();
+        self.wait_micro_sec(40);
         self.read_bit();
     }
 
-    fn read_bit(&self) -> bool {
+    fn read_bit(&mut self) -> bool {
         let low_time = self.wait_pulse(Level::High);
         let high_time = self.wait_pulse(Level::Low);
+
+        println!("low: {}, high: {}", low_time, high_time);
 
         high_time > low_time
     }
 
     /// wait until it changes to the disired voltage.
-    fn wait_pulse(&self, level: Level) -> u32 {
+    fn wait_pulse(&mut self, level: Level) -> u32 {
+
+        if self.pin.mode() != Mode::Input {
+            self.to_input_mode();
+        }
 
         let mut count = 0_u16;
-        let input = self.pin_input();
 
-        while input.read() != level {
+        println!("{:?}", self.pin.read());
+
+        while self.pin.read() != level {
             count += 1;
             if count > TIME_OUT_USEC {
                 panic!("time out"); // handle
@@ -70,19 +77,27 @@ impl DHT11 {
         u32::from(count)
     }
 
-    fn pin_output(&self) -> OutputPin {
-        let pin = self.gpio.get(GPIO_COMMUNICATOR_PIN).unwrap(); // TODO; handling
-        pin.into_output()
+    /// change a pin to output.
+    fn to_output_mode(&mut self) {
+        self.pin.set_mode(Mode::Output)
     }
 
-    fn pin_input(&self) -> InputPin {
-        let pin = self.gpio.get(GPIO_COMMUNICATOR_PIN).unwrap(); // TODO; handling
-        pin.into_input()
+    /// change a pin to output.
+    fn to_input_mode(&mut self) {
+        self.pin.set_mode(Mode::Input)
+    }
+
+    /// set an output pin level to low.
+    fn set_low_level(&mut self) {
+        if self.pin.mode() != Mode::Output {
+            self.to_output_mode();
+        }
+        self.set_low_level();
     }
 
     #[inline]
     fn wait_mil_sec(&self, duration: u64) {
-        std::thread::sleep(std::time::Duration::from_micros(duration))
+        std::thread::sleep(std::time::Duration::from_millis(duration))
     }
 
     #[inline]
