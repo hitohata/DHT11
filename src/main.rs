@@ -54,9 +54,9 @@ impl DHT11 {
 
         self.set_high_level();
 
-        delay.delay_us(40);
+        delay.delay_us(20);
 
-        println!("after handshake: {}", self.read_bit(delay));
+        self.read_bit(delay);
     }
 
     fn read_bit<D>(&mut self, delay: &mut D) -> bool
@@ -64,8 +64,6 @@ impl DHT11 {
     {
         let low_time = self.wait_pulse(Level::High, delay);
         let high_time = self.wait_pulse(Level::Low, delay);
-
-        println!("low: {}, high: {}", low_time, high_time);
 
         high_time > low_time
     }
@@ -81,11 +79,7 @@ impl DHT11 {
 
         let mut count = 0;
 
-        let now = std::time::SystemTime::now();
-
         while self.pin.read() != level {
-            println!("{:?}", now.elapsed().unwrap().as_micros());
-            println!("{:?}: {}",self.pin.read(), count);
             count += 1;
             if count > TIME_OUT_USEC {
                 panic!("time out"); // handle
@@ -122,13 +116,4 @@ impl DHT11 {
         self.pin.set_high();
     }
 
-    #[inline]
-    fn wait_mil_sec(&self, duration: u64) {
-        std::thread::sleep(std::time::Duration::from_millis(duration))
-    }
-
-    #[inline]
-    fn wait_micro_sec(&self, duration: u64) {
-        std::thread::sleep(std::time::Duration::from_micros(duration))
-    }
 }
