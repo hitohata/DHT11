@@ -52,8 +52,7 @@ impl DHT11 {
         self.set_low_level();
         delay.delay_ms(20);
 
-        self.set_high_level();
-
+        self.to_input_mode();
         delay.delay_us(20);
 
         self.read_bit(delay);
