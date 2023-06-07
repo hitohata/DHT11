@@ -1,5 +1,5 @@
-use core::panic;
-
+use core::{panic};
+use std::fmt;
 use rppal::gpio::{ Gpio, IoPin, Level, Mode, PullUpDown };
 use rppal::hal::Delay;
 use embedded_hal::blocking::delay::{ DelayMs, DelayUs };
@@ -13,19 +13,29 @@ fn main() {
     let mut dht11 = DHT11::new(GPIO_COMMUNICATOR_PIN);
     let mut delay = Delay::new();
 
-    let mut buf : Vec<u8>= vec![];
-
     dht11.setup(&mut delay);
 
-    for _ in 0..40 {
-        print!("{} ", if dht11.read_bit(&mut delay) { 1 } else { 0 });
-    }
+    let result =dht11.read(&mut delay);
+
+    println!("{:?}", result);
 
 }
 
 struct DHT11
 {
     pin: IoPin,
+}
+
+#[derive(Debug)]
+struct MeasurementResult {
+    temperature: f32,
+    humidity: f32
+}
+
+impl fmt::Display for MeasurementResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Temperature: {}\nHumidity: {}", self.temperature, self.humidity)
+    }
 }
 
 impl DHT11 {
@@ -37,6 +47,36 @@ impl DHT11 {
         io_pin.set_pullupdown(PullUpDown::PullUp);
 
         DHT11 { pin: io_pin }
+    }
+
+    pub fn read<D>(&mut self, delay: &mut D) -> MeasurementResult
+        where D: DelayMs<u16> + DelayUs<u16>
+    {
+
+        let mut buffer = vec![0_u8; 5];
+
+        for i in 0..40 {
+            if self.read_bit(delay) {
+                buffer[i / 8] |= 1 << ((7 - i % 8));
+            }
+        }
+
+        let checksum = buffer[0]
+            .wrapping_add(buffer[1])
+            .wrapping_add(buffer[2])
+            .wrapping_add(buffer[3]);
+
+        if checksum != buffer[4] {
+            println!("CHECK SUM ERROR"); // TODO: implement error
+        } 
+
+        let humidity = format!("{}.{}", buffer[0], buffer[1]).parse::<f32>().unwrap();
+        let temperature = format!("{}.{}", buffer[2], buffer[3]).parse::<f32>().unwrap();
+
+        MeasurementResult {
+            temperature,
+            humidity
+        }
     }
 
     /// Set up the connection to the DHT11
