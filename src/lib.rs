@@ -2,11 +2,9 @@ mod dht11_error;
 
 use std::fmt;
 use rppal::gpio::{ Gpio, IoPin, Level, Mode, PullUpDown };
-use rppal::hal::Delay;
 use embedded_hal::blocking::delay::{ DelayMs, DelayUs };
 use dht11_error::DHT11Error;
 
-const GPIO_COMMUNICATOR_PIN: u8 = 5;
 const TIME_OUT_USEC: u16 = 1000;
 const RETRY: u8 = 3;
 
