@@ -10,26 +10,13 @@ const GPIO_COMMUNICATOR_PIN: u8 = 5;
 const TIME_OUT_USEC: u16 = 1000;
 const RETRY: u8 = 3;
 
-
-fn main() {
-
-    let mut dht11 = DHT11::new(GPIO_COMMUNICATOR_PIN).unwrap();
-    let mut delay = Delay::new();
-
-    let result = dht11.read(&mut delay);
-
-
-    println!("{:?}", result);
-
-}
-
-struct DHT11
+pub struct DHT11
 {
     pin: IoPin,
 }
 
 #[derive(Debug)]
-struct MeasurementResult {
+pub struct MeasurementResult {
     pub temperature: f32,
     pub humidity: f32
 }
