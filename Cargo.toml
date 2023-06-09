@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 rppal = { version = "0.14.1", features = ["hal"] }
 embedded-hal = { version = "0.2.7" }
+thiserror = "1"
