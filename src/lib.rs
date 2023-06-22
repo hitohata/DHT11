@@ -3,7 +3,7 @@ mod dht11_error;
 use std::fmt;
 use rppal::gpio::{ Gpio, IoPin, Level, Mode, PullUpDown };
 use embedded_hal::blocking::delay::{ DelayMs, DelayUs };
-use dht11_error::DHT11Error;
+pub use dht11_error::DHT11Error;
 
 const TIME_OUT_USEC: u16 = 1000;
 const RETRY: u8 = 3;
